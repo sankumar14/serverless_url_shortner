@@ -1,0 +1,22 @@
+service: local-shortner
+plugins:
+  - serverless-python-requirements
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: python3.9
+
+functions:
+  creteShortUrl:
+    header: handler.create
+    events:
+      -http:
+        path: create
+        method: post
+  redirectUrl:
+    handler: handler.redirect
+    events:
+      -http:
+        path: /{shortId}
+        method: get
