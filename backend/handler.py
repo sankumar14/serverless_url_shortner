@@ -1,25 +1,53 @@
 import json
 import uuid
 import redis
+import os
 
 # connect to local docker Redis
-db = redis.Redis(host='localhost', port=6379, decode_responses=True)
+db = redis.Redis(host='localhost', port=6379, decode_responses=True, socket_timeout=5)
 
 def create(event, context):
-    body = json.loads(event['body'])
-    long_url = body.get('Url', '')
-    short_id = str(uuid.uuid4())[:6]
+    try:
+        body = json.loads(event.get('body', {}))
 
-    db.set(short_id, long_url)
+        long_url = body.get('url', '')
+        if not long_url:
+            print("DEBUG: Body received:", body)
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': f'url is required. Body: {body}'}),
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': 'True',
+                }
+            }
+        short_id = str(uuid.uuid4())[:6]
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps({'shortUrl': f"http://localhost:8000/{short_id}"}),
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Credentials': 'True',
+        db.set(short_id, long_url)
+        response = {
+            "shortUrl": f"http://localhost:3000/dev/{short_id}"
+             }
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps({"shortUrl": f"http://localhost:3000/dev/{short_id}"}),
+            'headers': {
+                "Content-Type": "application/json",
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Credentials': 'True',
+            }
         }
-    }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)}),
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Credentials': 'True',
+            }
+        }
+
 def redirect(event, context):
     short_id = event['pathParameters']['shortId']
     long_url = db.get(short_id)
@@ -33,4 +61,5 @@ def redirect(event, context):
         }
     return {
             'statusCode': 404,
-            'body':' Not Found  '}
+            'body': json.dumps({'error': 'URL not found'}) 
+            }

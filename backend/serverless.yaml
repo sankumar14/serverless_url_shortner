@@ -2,21 +2,26 @@ service: local-shortner
 plugins:
   - serverless-python-requirements
   - serverless-offline
+custom:
+  pythonRequirements:
+    dockerizePip: false
 
 provider:
   name: aws
   runtime: python3.9
+  timeout: 60
 
 functions:
   creteShortUrl:
-    header: handler.create
+    handler: handler.create
     events:
-      -http:
-        path: create
-        method: post
+      - http:
+          path: create
+          method: post
+          cors: true
   redirectUrl:
     handler: handler.redirect
     events:
-      -http:
-        path: /{shortId}
-        method: get
+      - http:
+          path: /{shortId}
+          method: get
